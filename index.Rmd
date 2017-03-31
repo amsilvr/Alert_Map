@@ -1,8 +1,8 @@
 ---
 title: "WEA Alerts By County"
-author: "Aaron Silverman"
 date: "March 31, 2017"
 output: html_document
+theme: jekyll-theme-modernist
 ---
 
 ```{r setup, include=FALSE, cache = TRUE}
@@ -11,11 +11,9 @@ require(knitr)
 source(file = "CMAS_Clean.R")
 source(file = "AlertMapping.R")
 ```
+The following [Wireless Emergency Alert](https://www.fema.gov/frequently-asked-questions-wireless-emergency-alerts) messages were transmitted by PBS through the[WARN Project](http://pbs.org/about/WARN) and distributed by datacasting from every Non-Commercial Educational television station in the country. 
 
-# WEA Alerting by County 
-## Friday, March 31, 2017
-
-
+PBS WARN started broadcasting WEA alerts through the WARN project in May of 2014.
 ```{r map, echo=FALSE, message=FALSE, warning=FALSE}
 m
 ```

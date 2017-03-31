@@ -13,16 +13,21 @@ if (!file.exists("data/county_shape_file.zip")) {
 require(rgdal)
 require(leaflet)
 
-county_spdf =readOGR(dsn = "data/cb_2015_us_county_20m.shp")
+county_spdf =readOGR(dsn = "data", layer = "cb_2015_us_county_500k")
 
 # Add the alert tally to the county data
 if (!exists("fips_lookup")) fips_lookup <- load_fips()
 # Join the tally by GEOID
-        county_spdf@data <- 
-                left_join(county_spdf@data, unique(select(fips_lookup, StateAbbr, STATEFP = StateNum))) %>%       
-                left_join(alert_tally) %>%
-                mutate(AMBER + FlashFlood + Other + Tornado + Tsunami)
-        county_spdf@data[is.na(county_spdf@data)] <- 0
+county_spdf@data <- left_join(county_spdf@data, unique(select(fips_lookup
+                                                              , StateAbbr
+                                                              , STATEFP = StateNum)
+                                                       )
+                              ) %>%
+  left_join(alert_tally) %>%
+  mutate(total = AMBER + FlashFlood + Other + Tornado + Tsunami)
+
+## Remove NA Values introduced by the join
+county_spdf@data[is.na(county_spdf@data)] <- 0
         
 # Create Popup Labels
 bins <- c(0, 1, 5, 10, 15, 20, 25, 30, Inf)

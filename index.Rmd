@@ -1,0 +1,22 @@
+---
+title: "WEA Alerts By County"
+author: "Aaron Silverman"
+date: "March 31, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE, cache = TRUE}
+require(knitr)
+
+source(file = "CMAS_Clean.R")
+source(file = "AlertMapping.R")
+```
+
+# WEA Alerting by County 
+## Friday, March 31, 2017
+
+
+```{r map, echo=FALSE, message=FALSE, warning=FALSE}
+m
+```
+

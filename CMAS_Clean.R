@@ -215,6 +215,6 @@ alert_tally <- left_join(fips_msg, msg2) %>%
         transmute(msg_id, GEOID, type = as.factor(type)) %>%
         count(GEOID, type) %>%
         rename(WEATYPE = type, WEANUM = n) %>%
-        spread(WEATYPE, WEANUM, fill = "0")
+        spread(WEATYPE, WEANUM, fill = "0", convert = TRUE)
 
         

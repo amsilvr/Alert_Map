@@ -5,8 +5,6 @@ require(tidyverse)
 require(lubridate)
 require(stringr)
 
-
-
 ss_new <- gs_key("1Xw4JefUCS4HHQ0KpvKhr-DjklqzhH3_CeA-zhoAuQfI", visibility = "private") #CMAS_Alerts_Processed
 
 load_msgs <- function() {
@@ -60,7 +58,8 @@ load_msgs <- function() {
                          , remove = TRUE) %>%
                 separate(t2, c("areas"), sep = "[:punct:]{4}"
                          , extra = "drop", remove = TRUE) %>%
-                mutate(threat_type = gsub("\\. .*","", cmac)) %>%
+                mutate(threat_type = gsub("\\. .*","", cmac)
+                       ,id = str_trim(id)) %>%
                 dplyr::filter(!(gateway_id == "http://tcs.tsis.com\n") ) 
         
         msg <- msg[-grep(" test", msg$threat_type),] 
@@ -90,7 +89,19 @@ fips_lookup <- read_csv(file = census
 
 
 ## Create functions for replacement loops ##
-
+state_find <- function(area_list) {
+  area_list <- str_replace_all(area_list
+                               , pattern = "(([A-z]*) \\(([A-Z]{2})\\)), \\1"
+                               , replacement = "\\2 city \\(\\3\\), \\2 \\(\\3\\)"
+  )
+  
+   n <- str_match_all(string = area_list
+                     , pattern = "\\(?([A-Z]{2})\\)?")
+  
+  area_clean <- paste(str_trim(n[[1]][,2], side = "both")) %>%
+    unique() %>%
+    print()
+}
 area_find <- function(area_list) { ## isolates the state and county
         area_list <- str_replace_all(area_list
                      , pattern = "(([A-z]*) \\(([A-Z]{2})\\)), \\1"
@@ -115,7 +126,7 @@ area_find <- function(area_list) { ## isolates the state and county
         str_replace_all(pattern = "PR lsabela", "PR Isabela") %>%
         str_replace_all(pattern = "TX wall", "TX Wall") %>%
         str_replace_all(pattern = "TX hell", "TX Hall") %>%
-        str_replace_all(pattern = "MT Lewis Clark", "MT Lewis and Clark")
+        str_replace_all(pattern = "MT Lewis Clark", "MT Lewis and Clark") 
         return(area_clean)
 
 }
@@ -142,7 +153,7 @@ full_state <- function(areas_states) {
         t <- data_frame(st = "")
         for (i in seq_along(areas_states$areas)) {
                 t[i,1] <- filter(fips_lookup
-                                 , StateAbbr == trimws(areas_states[i,2])) %>%
+                                 , StateAbbr == str_trim(areas_states[i,2])) %>%
                         transmute(counties = 
                                           gsub(pattern = "([A-Z]{2}) (.*)",
                                                replace = "\\2 (\\1)", 
@@ -158,8 +169,8 @@ full_state <- function(areas_states) {
 if (!exists("msg")) msg <- load_msgs()
 
 areas <- transmute(msg
-                   , id = trimws(id)
-                   , areas = trimws(areas))
+                   , id = str_trim(id)
+                   , areas = str_trim(areas))
 
 areas_states <- filter(areas, str_length(areas) == 2)
 fsa <- full_state(areas_states)

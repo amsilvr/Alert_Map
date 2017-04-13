@@ -1,7 +1,7 @@
 # Download Shapefiles
 
 countyshapes_url <- "http://www2.census.gov/geo/tiger/GENZ2015/shp/cb_2015_us_county_20m.zip"
-
+stateshapes_url <- 
 if (!dir.exists("data")) {dir.create("data")}
 if (!file.exists("data/county_shape_file.zip")) {
         download.file(countyshapes_url
@@ -64,27 +64,47 @@ paste0( if_else(county_spdf@data$AMBER > 0
         , missing = "")
     )  %>%  #end label
 lapply(htmltools::HTML)
+states <- geojsonio::geojson_read("json/us-states.geojson", what = "sp")
+class(states)
+
+s = leaflet(data = map('state')) %>%
+  addTiles()  %>% 
+  setView(lng = -96,lat = 37.8,zoom =  4) %>%
+  addPolygons(stroke = TRUE
+              , color = 'white'
+              , smoothFactor = 10
+              , group = 'states'
+              , fill = FALSE
+              , noClip = FALSE
+  )
 m = leaflet(county_spdf) %>%
         addTiles()  %>% 
         setView(-96, 37.8, 4) %>%
         addPolygons(stroke = FALSE
                    , fillOpacity = 0.5
                    , smoothFactor = 0.5
-                   # , color = ~colorQuantile("YlOrRd", total)(total)
+                   , group = 'counties'
                    , fillColor = ~pal(total)
                    , highlight = highlightOptions(
                             weight = 5,
                             color = "#666",
                             dashArray = "",
-                            fillOpacity = 0.7,
-                            bringToFront = TRUE)
+                            fillOpacity = 0.7
+                            #bringToFront = TRUE
+                            )
                     , label = labels
                     , labelOptions = labelOptions(
                             style = list("font-weight" = "normal", padding = "3px 8px"),
                             textsize = "15px",
                             direction = "auto")
                     ) %>%
-        addLegend(pal = pal
+  addPolygons(stroke = TRUE
+              , color = 'white'
+              , smoothFactor = 10
+              , group = 'states'
+              , fill = FALSE
+  ) %>%
+              addLegend(pal = pal
                   , values = ~total, opacity = 0.7
                   , title = "Total WARN Messages Sent",
-                      position = "bottomright")
+                      position = "bottomright") 

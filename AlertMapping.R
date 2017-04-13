@@ -12,6 +12,8 @@ if (!file.exists("data/county_shape_file.zip")) {
  
 require(rgdal)
 require(leaflet)
+require(maps)
+
 if(! exists("alert_tally")) source("CMAS_Clean.R")
 county_spdf =readOGR(dsn = "data/cb_2015_us_county_20m.shp")
 
@@ -64,47 +66,26 @@ paste0( if_else(county_spdf@data$AMBER > 0
         , missing = "")
     )  %>%  #end label
 lapply(htmltools::HTML)
-states <- geojsonio::geojson_read("json/us-states.geojson", what = "sp")
-class(states)
-
-s = leaflet(data = map('state')) %>%
-  addTiles()  %>% 
-  setView(lng = -96,lat = 37.8,zoom =  4) %>%
-  addPolygons(stroke = TRUE
-              , color = 'white'
-              , smoothFactor = 10
-              , group = 'states'
-              , fill = FALSE
-              , noClip = FALSE
-  )
 m = leaflet(county_spdf) %>%
-        addTiles()  %>% 
-        setView(-96, 37.8, 4) %>%
-        addPolygons(stroke = FALSE
-                   , fillOpacity = 0.5
-                   , smoothFactor = 0.5
-                   , group = 'counties'
-                   , fillColor = ~pal(total)
-                   , highlight = highlightOptions(
-                            weight = 5,
-                            color = "#666",
-                            dashArray = "",
-                            fillOpacity = 0.7
-                            #bringToFront = TRUE
-                            )
-                    , label = labels
-                    , labelOptions = labelOptions(
-                            style = list("font-weight" = "normal", padding = "3px 8px"),
-                            textsize = "15px",
-                            direction = "auto")
-                    ) %>%
-  addPolygons(stroke = TRUE
-              , color = 'white'
-              , smoothFactor = 10
-              , group = 'states'
-              , fill = FALSE
+  addTiles()  %>% 
+  setView(-96, 37.8, 4) %>%
+  addPolygons(stroke = FALSE
+              , fillOpacity = 1
+              , smoothFactor = 0.5
+              , fillColor = ~pal(total)
+              , highlight = highlightOptions(
+                weight = 5,
+                color = "#666",
+                dashArray = "",
+                fillOpacity = 0.7,
+                bringToFront = TRUE)
+              , label = labels
+              , labelOptions = labelOptions(
+                style = list("font-weight" = "normal", padding = "3px 8px"),
+                textsize = "15px",
+                direction = "auto")
   ) %>%
-              addLegend(pal = pal
-                  , values = ~total, opacity = 0.7
-                  , title = "Total WARN Messages Sent",
-                      position = "bottomright") 
+  addLegend(pal = pal
+            , values = ~total, opacity = 1
+            , title = "Total WARN Messages Sent",
+            position = "bottomright")

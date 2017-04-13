@@ -1,7 +1,7 @@
 # Download Shapefiles
 
 countyshapes_url <- "http://www2.census.gov/geo/tiger/GENZ2015/shp/cb_2015_us_county_20m.zip"
-
+stateshapes_url <- 
 if (!dir.exists("data")) {dir.create("data")}
 if (!file.exists("data/county_shape_file.zip")) {
         download.file(countyshapes_url
@@ -12,6 +12,8 @@ if (!file.exists("data/county_shape_file.zip")) {
  
 require(rgdal)
 require(leaflet)
+require(maps)
+
 if(! exists("alert_tally")) source("CMAS_Clean.R")
 county_spdf =readOGR(dsn = "data/cb_2015_us_county_20m.shp")
 
@@ -65,26 +67,25 @@ paste0( if_else(county_spdf@data$AMBER > 0
     )  %>%  #end label
 lapply(htmltools::HTML)
 m = leaflet(county_spdf) %>%
-        addTiles()  %>% 
-        setView(-96, 37.8, 4) %>%
-        addPolygons(stroke = FALSE
-                   , fillOpacity = 0.5
-                   , smoothFactor = 0.5
-                   # , color = ~colorQuantile("YlOrRd", total)(total)
-                   , fillColor = ~pal(total)
-                   , highlight = highlightOptions(
-                            weight = 5,
-                            color = "#666",
-                            dashArray = "",
-                            fillOpacity = 0.7,
-                            bringToFront = TRUE)
-                    , label = labels
-                    , labelOptions = labelOptions(
-                            style = list("font-weight" = "normal", padding = "3px 8px"),
-                            textsize = "15px",
-                            direction = "auto")
-                    ) %>%
-        addLegend(pal = pal
-                  , values = ~total, opacity = 0.7
-                  , title = "Total WARN Messages Sent",
-                      position = "bottomright")
+  addTiles()  %>% 
+  setView(-96, 37.8, 4) %>%
+  addPolygons(stroke = FALSE
+              , fillOpacity = 1
+              , smoothFactor = 0.5
+              , fillColor = ~pal(total)
+              , highlight = highlightOptions(
+                weight = 5,
+                color = "#666",
+                dashArray = "",
+                fillOpacity = 0.7,
+                bringToFront = TRUE)
+              , label = labels
+              , labelOptions = labelOptions(
+                style = list("font-weight" = "normal", padding = "3px 8px"),
+                textsize = "15px",
+                direction = "auto")
+  ) %>%
+  addLegend(pal = pal
+            , values = ~total, opacity = 1
+            , title = "Total WARN Messages Sent",
+            position = "bottomright")

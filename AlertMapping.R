@@ -13,6 +13,7 @@ if (!file.exists("data/county_shape_file.zip")) {
 require(rgdal)
 require(leaflet)
 require(maps)
+require(albersusa)
 
 if(! exists("alert_tally")) source("CMAS_Clean.R")
 county_spdf =readOGR(dsn = "data/cb_2015_us_county_20m.shp")

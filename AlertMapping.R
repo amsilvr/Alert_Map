@@ -1,28 +1,18 @@
-# Download Shapefiles
-
-countyshapes_url <- "http://www2.census.gov/geo/tiger/GENZ2015/shp/cb_2015_us_county_20m.zip"
-stateshapes_url <- 
-if (!dir.exists("data")) {dir.create("data")}
-if (!file.exists("data/county_shape_file.zip")) {
-        download.file(countyshapes_url
-                      , destfile = "data/county_shape_file.zip")
-        t <- unzip("data/county_shape_file.zip", exdir = "data")
-}
-# Read the file with rgdal
- 
 require(rgdal)
 require(leaflet)
-require(maps)
+require(albersusa)
 
-if(! exists("alert_tally")) source("CMAS_Clean.R")
-county_spdf =readOGR(dsn = "data/cb_2015_us_county_20m.shp")
+if (!exists("alert_tally")) source("CMAS_Clean.R")
+county_spdf = counties_composite() #%>%
+state_spdf = usa_composite()
+
 
 # Add the alert tally to the county data
 if (!exists("fips_lookup")) fips_lookup <- load_fips()
-# Join the tally by GEOID
+# Join the tally by fips number
 county_spdf@data <- left_join(county_spdf@data, unique(select(fips_lookup
-                                                              , StateAbbr
-                                                              , STATEFP = StateNum)
+                                                              , abb
+                                                              , fips)
                                                        )
                               ) %>%
   left_join(alert_tally) %>%
@@ -35,10 +25,11 @@ county_spdf@data[is.na(county_spdf@data)] <- 0
 bins <- c(0, 1, 5, 10, 15, 20, 25, 30, Inf)
 pal <- colorBin("YlGnBu", domain = county_spdf@data$total, bins = bins)
 labels <- sprintf(
-        "<strong>%s, %s: <br/ >
+        "<strong>%s %s, %s: <br/ >
         %g Alerts</strong>"
-        , county_spdf@data$NAME
-        , county_spdf@data$StateAbbr
+        , county_spdf@data$name
+        , county_spdf@data$lsad
+        , county_spdf@data$abb
         , county_spdf@data$total
 ) %>%
 paste0( if_else(county_spdf@data$AMBER > 0
@@ -66,18 +57,35 @@ paste0( if_else(county_spdf@data$AMBER > 0
         , missing = "")
     )  %>%  #end label
 lapply(htmltools::HTML)
-m = leaflet(county_spdf) %>%
-  addTiles()  %>% 
-  setView(-96, 37.8, 4) %>%
+# Albers US projection cribbed from 
+# https://rstudio.github.io/leaflet/projections.html
+
+epsg2163 <- leafletCRS(
+  crsClass = "L.Proj.CRS",
+  code = "EPSG:2163",
+  proj4def = "+proj=laea 
+               +lat_0=45 +lon_0=-95 
+               +x_0=0 +y_0=0 
+               +a=6370997 
+               +b=6370997
+               +units=m +no_defs",
+  resolutions = 2^(16:7))
+
+m = leaflet(county_spdf, options = leafletOptions(crs = epsg2163)) %>%
+  # addTiles('http://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+  #   attribution = paste(
+  #   '&copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors',
+  #   '&copy; <a href="http://cartodb.com/attributions">CartoDB</a>')
+  #   )%>%
   addPolygons(stroke = FALSE
-              , fillOpacity = 1
-              , smoothFactor = 0.5
+              , fillOpacity = .7
+              , smoothFactor = 0.25
               , fillColor = ~pal(total)
               , highlight = highlightOptions(
                 weight = 5,
                 color = "#666",
                 dashArray = "",
-                fillOpacity = 0.7,
+                fillOpacity = 1,
                 bringToFront = TRUE)
               , label = labels
               , labelOptions = labelOptions(
@@ -85,7 +93,13 @@ m = leaflet(county_spdf) %>%
                 textsize = "15px",
                 direction = "auto")
   ) %>%
+  addPolygons(data = state_spdf #statelines
+              , stroke = TRUE
+              , weight = 2
+              , opacity = 1
+              , color = "grey"
+              , fill = FALSE) %>%
   addLegend(pal = pal
             , values = ~total, opacity = 1
-            , title = "Total WARN Messages Sent",
-            position = "bottomright")
+            , title = "Total WARN <br />Sent",
+            position = "bottomleft")

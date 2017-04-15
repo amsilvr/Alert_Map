@@ -1,15 +1,3 @@
-# Download Shapefiles - removed because using albersusa
-
-# countyshapes_url <- "http://www2.census.gov/geo/tiger/GENZ2015/shp/cb_2015_us_county_20m.zip"
-# stateshapes_url <- 
-# if (!dir.exists("data")) {dir.create("data")}
-# if (!file.exists("data/county_shape_file.zip")) {
-#         download.file(countyshapes_url
-#                       , destfile = "data/county_shape_file.zip")
-#         t <- unzip("data/county_shape_file.zip", exdir = "data")
-# }
-# Read the file with rgdal
- 
 require(rgdal)
 require(leaflet)
 require(albersusa)

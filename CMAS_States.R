@@ -4,6 +4,7 @@ require(googlesheets)
 require(tidyverse)
 require(lubridate)
 require(stringr)
+require(albersusa)
 
 ss_new <- gs_key("1Xw4JefUCS4HHQ0KpvKhr-DjklqzhH3_CeA-zhoAuQfI", visibility = "private") #CMAS_Alerts_Processed
 
@@ -30,7 +31,8 @@ load_msgs <- function() {
         ## creates a table for fields with "update" records
         
         updates <- filter(msg, nchar(special_handling) < 10) %>%
-                select(rec_time, cmac, gateway_id, id
+                select(rec_time, cmac, gateway_id
+                       , id
                        , ref_id = special_handling
                        , special_handling = message_type
                        , message_type = category
@@ -68,22 +70,33 @@ load_msgs <- function() {
        
         } 
 
+classify_message <- function(msg) {
+  
+  mutate(msg, type = 
+           case_when(
+             grepl("Tornado", msg$message_text, ignore.case = TRUE) ~ "Tornado",
+             grepl("Flash Flood", msg$message_text, ignore.case = TRUE) ~ "FlashFlood", 
+             grepl("Amber", msg$message_text, ignore.case = TRUE) ~ "AMBER",
+             grepl("Tsunami", msg$message_text, ignore.case = TRUE) ~ "Tsunami",
+             TRUE ~ "Other")
+  ) %>%
+    transmute(msg_id
+              , rec_time
+              , expire_time
+              , response = response_type
+              , urgency
+              , wea = message_text 
+              , type = as.factor(type)
+    ) 
+}
 
 ## Download local copy of FIPS lookup data and read into memory
-load_fips <- function() {
-        
-census <- "http://www2.census.gov/geo/docs/reference/codes/files/national_county.txt"
+load_state_fips <- function() {
 
-fips_lookup <- read_csv(file = census
-         , col_names = c("StateAbbr"
-                         , "StateNum"
-                         , "CountyNum"
-                         , "CountyName")
-         , col_types = "cccc_"
-                 ) %>%
-        mutate(Name = paste(StateAbbr, str_replace(CountyName," County",replacement = ""))
-               , Num = paste0(StateNum, CountyNum))
-
+    fips_lookup <- albersusa::usa_sf() %>%
+      transmute(fips_state, name
+                ,abb = iso_3166_2)
+      
 }
 
 ## Create functions for replacement loops ##
@@ -100,55 +113,7 @@ state_find <- function(area_list) {
     unique() %>%
     return()
 }
-area_find <- function(area_list) { ## isolates the state and county
-        area_list <- str_replace_all(area_list
-                     , pattern = "(([A-z]*) \\(([A-Z]{2})\\)), \\1"
-                     , replacement = "\\2 city \\(\\3\\), \\2 \\(\\3\\)"
-                     )
 
-        m <- str_match_all(string = area_list
-                             , pattern = "[A-z. ]{3,} ")
-        
-        n <- str_match_all(string = area_list
-                           , pattern = "\\(?([A-Z]{2})\\)?")
-        
-        area_clean <- paste(n[[1]][,2]
-                            , str_trim(m[[1]][,1], side = "both")) %>%
-        return() %>%
-  ## Clean TCS county names to match census list
-  ##       
-        str_replace_all(pattern = "E\\.",replacement = "East") %>%
-        str_replace_all(pattern = "W\\.",replacement = "West") %>%
-        str_replace_all(pattern = "(IN La|IL La) (Porte|Salle)",replacement = "\\1\\2") %>%
-        str_replace_all(pattern = "FL Dade", "FL Miami-Dade") %>%
-        str_replace_all(pattern = "PR lsabela", "PR Isabela") %>%
-        str_replace_all(pattern = "TX wall", "TX Wall") %>%
-        str_replace_all(pattern = "TX hell", "TX Hall") %>%
-        str_replace_all(pattern = "MT Lewis Clark", "MT Lewis and Clark") 
-        return(area_clean)
-
-}
-classify_message <- function(msg) {
-  
-  mutate(msg, type = 
-           case_when(
-               grepl("Tornado", msg$message_text, ignore.case = TRUE) ~ "Tornado"
-             , grepl("Flash Flood", msg$message_text, ignore.case = TRUE) ~ "FlashFlood" 
-             , grepl("Amber", msg$message_text, ignore.case = TRUE) ~ "AMBER"
-             , grepl("Tsunami", msg$message_text, ignore.case = TRUE) ~ "Tsunami"
-            ,TRUE ~ "Other")
-  ) %>%
-    transmute(msg_id
-              , rec_time
-              , expire_time
-              , response = response_type
-              , urgency
-              , wea = message_text 
-              , type = as.factor(type)
-    ) 
-}
-## Substitutes all counties in a state 
-## For areas that include only state names
 
 
 #####################
@@ -157,15 +122,13 @@ classify_message <- function(msg) {
 
 if (!exists("msg")) msg <- load_msgs()
 
-areas <- transmute(msg
-                   , msg_id = str_trim(id)
-                   , areas = str_trim(areas))
+areas_states <- transmute(msg, msg_id, areas = str_trim(areas))
 
-state_msg <- tapply(areas$areas, state_find,INDEX = areas$msg_id,simplify = TRUE) %>%
+state_msg <- tapply(areas_states$areas, state_find,INDEX = areas_states$msg_id,simplify = TRUE) %>%
   unlist(recursive = TRUE) %>%
   as_tibble(validate = TRUE) %>%
   rownames_to_column()    %>%
-  rename(msg_id = rowname, StateAbbr = value)
+  rename(msg_id = rowname, abb = value)
 ## Cleanup
 
 # rm(list = c("areas", "fips_lookup", "two", "three"))
@@ -175,8 +138,8 @@ state_msg <- tapply(areas$areas, state_find,INDEX = areas$msg_id,simplify = TRUE
 msg2 <- classify_message(msg)
 
 alert_states <- inner_join(msg2, state_msg) %>%
-        select(msg_id, abbr = StateAbbr, type) %>%
-        count(abbr, type) %>%
+        select(msg_id, abb, type) %>%
+        count(abb, type) %>%
         #rename(WEATYPE = type, WEANUM = n) %>%
         spread(type, n, fill = "0", convert = TRUE)
 

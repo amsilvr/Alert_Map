@@ -10,10 +10,11 @@ state_spdf = usa_composite()
 # Add the alert tally to the county data
 if (!exists("fips_lookup")) fips_lookup <- load_fips()
 # Join the tally by fips number
-county_spdf@data <- left_join(county_spdf@data, unique(select(fips_lookup
-                                                              , abb
-                                                              , fips)
-                                                       )
+county_spdf@data <- left_join(county_spdf@data
+                              , unique(select(fips_lookup
+                                                , abb
+                                                , fips)
+                                         )
                               ) %>%
   left_join(alert_tally) %>%
   mutate(total = AMBER + FlashFlood + Other + Tornado + Tsunami)

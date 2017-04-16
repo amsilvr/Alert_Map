@@ -1,6 +1,6 @@
 require(maps)
+require(tidyverse)
 require(plotly)
-require(magrittr)
 
 # Set Plotly info
 
@@ -13,15 +13,14 @@ Sys.setenv("plotly_api_key"="kDoqXYPQYD2PqBVKpNA0")
 if (!exists("alert_states")) source("CMAS_States.R")
  
 # Join alert_tally to  to return the matching county name
-if (!exists("fips_lookup")) fips_lookup <- load_fips() %>%
-   select(1,4, fips = Num)
+if (!exists("fips_lookup")) fips_lookup <- load_state_fips() 
 
-t <-  data_frame(abbr = state.abb, name = state.name)
+t <-  select(fips_lookup, abb, name)
  
 state_alert_df <- ungroup(alert_states) %>% 
-  set_colnames(value = tolower(colnames(.))) %>% 
+  magrittr::set_colnames(value = tolower(colnames(.))) %>% 
   mutate(total = amber + flashflood + other + tornado + tsunami) %>%
-  group_by(abbr) %>%
+  group_by(abb) %>%
   # select(StateAbbr, amber, flashflood, other, tornado, tsunami, total) %>%
   summarize_all(sum) %>%
   left_join(t) 
@@ -67,7 +66,7 @@ p <- plot_geo(state_alert_df,locationmode = 'USA-states') %>%
     z = ~total
     , text = ~hover
     , hoverinfo = "text"
-    , locations = ~abbr
+    , locations = ~abb
     , color = ~total
     , colors = 'Greens'
   ) %>%
@@ -77,5 +76,5 @@ p <- plot_geo(state_alert_df,locationmode = 'USA-states') %>%
          May 2014 to March 2017'
          , geo = g)
 
-chart_link = plotly_POST(p, filename = "warn_states")
-chart_link
+# chart_link = plotly_POST(p, filename = "warn_states")
+# chart_link
